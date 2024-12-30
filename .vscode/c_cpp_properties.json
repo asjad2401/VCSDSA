@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${default}",
+                "${workspaceFolder}/vcpkg/buildtrees/jsoncpp/src/1.9.6-29ceffc35f.clean/include",
+                "${workspaceFolder}/vcpkg/buildtrees/boost-uuid/src/ost-1.86.0-80fb3aacc7.clean/libs/uuid/include",
+                "${workspaceFolder}/vcpkg/installed/x64-windows/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}
