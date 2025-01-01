@@ -2,12 +2,14 @@
 #include "../include/FileSystem.h"
 #include "../include/Utilities.h"
 #include "../include/CommitGraph.h"
+#include "../include/MergeHandler.h"
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <string.h>
 #include <fstream>
-
+#include <unordered_set>
+#include <set>
 
 namespace fs = std::filesystem;
 using namespace std;
@@ -193,7 +195,7 @@ void VCSCommands::commit(const std::string &message)
     nlohmann::json commit;
     commit["commit_id"] = commitId;
     commit["branch_name"] = branchName; // Use the current branch
-    commit["parent"] = parentCommitId; 
+    commit["parent"] = parentCommitId;
     commit["directory_tree"] = directoryTree;
     commit["file_names"] = fileNames;
     commit["file_hashes"] = fileHashes;
@@ -567,7 +569,7 @@ void VCSCommands::revert(const std::string &commitId)
             }
         }
         std::string currentBranchPath = ".vcs/current_branch/current_branch.json";
-         if (FileSystem::fileExists(currentBranchPath))
+        if (FileSystem::fileExists(currentBranchPath))
         {
             nlohmann::json currentBranch = nlohmann::json::parse(FileSystem::readFile(currentBranchPath));
             currentBranch["head"] = commitId;
@@ -592,9 +594,9 @@ void VCSCommands::merge(const std::string &sourceBranch)
     std::string sourceBranchPath = ".vcs/branches/" + sourceBranch + ".json";
     std::string currentBranchPath = ".vcs/current_branch/current_branch.json";
 
-
     // Validate source branch
-    if (!FileSystem::fileExists(sourceBranchPath)) {
+    if (!FileSystem::fileExists(sourceBranchPath))
+    {
         std::cerr << "Error: Branch '" << sourceBranch << "' does not exist!" << std::endl;
         return;
     }
@@ -664,11 +666,9 @@ void VCSCommands::merge(const std::string &sourceBranch)
         }
     }
 
-
     std::string sourceHead = sourceBranchData["head"];
     std::string currentHead = currentBranchData["head"];
     std::string currentBranchName = currentBranchData["name"];
-
 
     // Check if branches are already merged
     if (sourceHead == currentHead)
@@ -681,7 +681,6 @@ void VCSCommands::merge(const std::string &sourceBranch)
     std::string sourceCommitPath = ".vcs/commits/" + sourceHead + ".json";
     std::string currentCommitPath = ".vcs/commits/" + currentHead + ".json";
 
-
     // Validate commits
     if (!FileSystem::fileExists(sourceCommitPath) || !FileSystem::fileExists(currentCommitPath))
     {
@@ -693,16 +692,17 @@ void VCSCommands::merge(const std::string &sourceBranch)
     nlohmann::json sourceCommitData = nlohmann::json::parse(FileSystem::readFile(sourceCommitPath));
     nlohmann::json currentCommitData = nlohmann::json::parse(FileSystem::readFile(currentCommitPath));
 
-
     // Merge directory trees
     nlohmann::json mergedTree = currentTree;
     bool conflictDetected = false;
 
+    // First pass: Check for conflicts and add files from source
     for (const auto &[filePath, sourceHash] : sourceTree.items())
     {
-        if (currentTree.contains(filePath))
+        // If file exists in both branches
+        if (currentTree.find(filePath) != currentTree.end())
         {
-            // Detect conflict
+            // Compare hashes to detect changes
             if (currentTree[filePath] != sourceHash)
             {
                 conflictDetected = true;
@@ -711,11 +711,21 @@ void VCSCommands::merge(const std::string &sourceBranch)
         }
         else
         {
-            // Add file from source branch
+            // File only in source branch - add it
             mergedTree[filePath] = sourceHash;
+            std::cout << "Adding file from source branch: " << filePath << std::endl;
         }
     }
-    cout << "after merging loop" << endl;
+
+    // Second pass: Add files that are only in current branch (already in mergedTree)
+    for (const auto &[filePath, currentHash] : currentTree.items())
+    {
+        if (sourceTree.find(filePath) == sourceTree.end())
+        {
+            // File only in current branch - keep it (already in mergedTree)
+            std::cout << "Keeping file from current branch: " << filePath << std::endl;
+        }
+    }
     // Abort merge if conflicts detected
     if (conflictDetected)
     {
@@ -805,12 +815,12 @@ void VCSCommands::log()
     }
 }
 
-void VCSCommands::graph(){
+void VCSCommands::graph()
+{
     CommitGraph graph;
     graph.buildGraph(".vcs"); // Build the commit graph
-    graph.displayGraph(); // Display the graph
+    graph.displayGraph();     // Display the graph
 
-    
     std::ofstream dotFile("commit_graph.dot");
     dotFile << graph.exportToDOT();
     dotFile.close();

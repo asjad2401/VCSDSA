@@ -2,13 +2,14 @@
 #include "../include/FileSystem.h"
 #include "../include/Utilities.h"
 #include <iostream>
-
+using namespace std;
 // Find the common ancestor commit between two branches
 std::string MergeHandler::findCommonAncestor(const std::string& branch1, const std::string& branch2) {
     // Load commit timelines for both branches
     std::string branch1Path = ".vcs/branches/" + branch1 + ".json";
     std::string branch2Path = ".vcs/branches/" + branch2 + ".json";
 
+    cout<<branch1Path<<endl<<branch2Path<<endl;
     if (!FileSystem::fileExists(branch1Path) || !FileSystem::fileExists(branch2Path)) {
         std::cerr << "Error: One or both branches do not exist!" << std::endl;
         return "";
